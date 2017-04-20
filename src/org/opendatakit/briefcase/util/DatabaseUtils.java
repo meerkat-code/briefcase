@@ -24,6 +24,8 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Set;
 import java.util.TreeSet;
+import java.lang.System;
+import java.util.HashMap;
 
 /**
  * This class abstracts all the functionality of the instance-tracking
@@ -41,7 +43,9 @@ public class DatabaseUtils {
   private PreparedStatement getRecordedInstanceQuery = null;
   private PreparedStatement insertRecordedInstanceQuery = null;
   private PreparedStatement deleteRecordedInstanceQuery = null;
-  
+  private HashMap instances = null;
+
+
   public DatabaseUtils(Connection connection) {
     this.connection = connection;
   }
@@ -133,20 +137,23 @@ public class DatabaseUtils {
   public File hasRecordedInstance( String instanceId ) {
     try {
       assertRecordedInstanceTable();
-      
-      if ( getRecordedInstanceQuery == null ) {
-        getRecordedInstanceQuery = 
-            connection.prepareStatement("SELECT directory FROM recorded_instance WHERE instanceId = ?");
-      }
-      
-      getRecordedInstanceQuery.setString(1, instanceId);
-      ResultSet values = getRecordedInstanceQuery.executeQuery();
-      File f = null;
-      while ( values.next() ) {
-        if ( f != null ) {
-          throw new SQLException("Duplicate entries for instanceId: " + instanceId);
+
+      if ( instances == null ) {
+        getRecordedInstanceQuery =
+            connection.prepareStatement("SELECT directory, instanceId FROM recorded_instance");
+        instances = new HashMap();
+        ResultSet values = getRecordedInstanceQuery.executeQuery();
+        while(values.next()){
+          String folder = values.getString(1);
+          String currentInstanceId = values.getString(2);
+          instances.put(currentInstanceId, folder);
+
         }
-        f = new File( values.getString(1) );
+      }
+      File f = null;
+      if ( instances.containsKey(instanceId)){
+        String folder = instances.get(instanceId).toString();
+        f = new File( folder );
       }
       return (f != null && f.exists() && f.isDirectory()) ? f : null;
     } catch ( SQLException e ) {

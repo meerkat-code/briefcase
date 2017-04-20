@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.lang.System;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -50,7 +51,7 @@ public class ServerFetcher {
 
   private static final String MD5_COLON_PREFIX = "md5:";
   
-  private static final int MAX_ENTRIES = 100;
+  private static final int MAX_ENTRIES = 10000;
 
   ServerConnectionInfo serverInfo;
 
@@ -279,7 +280,6 @@ public class ServerFetcher {
         EventBus.publish(new FormStatusEvent(fs));
         return false;
       }
-
       fs.setStatusString("retrieving next chunk of instances from server...", true);
       EventBus.publish(new FormStatusEvent(fs));
 
@@ -300,7 +300,6 @@ public class ServerFetcher {
         EventBus.publish(new FormStatusEvent(fs));
         return false;
       }
-
       SubmissionDownloadChunk chunk;
       try {
         chunk = XmlManipulationUtils.parseSubmissionDownloadListResponse(result.doc);
@@ -310,7 +309,6 @@ public class ServerFetcher {
         return false;
       }
       websafeCursorString = chunk.websafeCursorString;
-
       for (String uri : chunk.uriList) {
         if ( isCancelled() ) {
           fs.setStatusString("aborting fetching submissions...", true);
@@ -349,14 +347,16 @@ public class ServerFetcher {
 
   private void downloadSubmission(File formInstancesDir, DatabaseUtils formDatabase, BriefcaseFormDefinition lfd, FormStatus fs,
       String uri) throws Exception {
-
       File instanceFolder = formDatabase.hasRecordedInstance(uri);
       if ( instanceFolder != null ) {
           //check if the submission file is present in the folder before skipping
+
           File instance = new File(instanceFolder, "submission.xml");
+
           File instanceEncrypted = new File(instanceFolder, "submission.xml.enc");
+
           if (instance.exists() || instanceEncrypted.exists()) {
-              logger.info("already present - skipping fetch: " + uri );
+              logger.info("already present - skipping fetch: " + uri +" " + System.currentTimeMillis());
               return;
           }
       }
